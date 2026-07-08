@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) {
@@ -40,6 +41,12 @@ db.exec(`
     quota_used        INTEGER DEFAULT 0,
     reset_type        TEXT    NOT NULL CHECK(reset_type IN ('daily','fixed')),
     last_reset_date   TEXT    NOT NULL  -- format: YYYY-MM-DD
+  );
+
+  CREATE TABLE IF NOT EXISTS admin_users (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    username    TEXT    UNIQUE NOT NULL,
+    password    TEXT    NOT NULL  -- SHA256 hash
   );
 `);
 
@@ -82,6 +89,15 @@ if (endpointCount === 0) {
 
   insertMany(dummyEndpoints);
   console.log('[DB] Seeded 3 dummy endpoints.');
+}
+
+// ── Seed Default Admin ─────────────────────────────────────────────────────
+
+const adminCount = db.prepare('SELECT COUNT(*) AS cnt FROM admin_users').get().cnt;
+if (adminCount === 0) {
+  const hash = crypto.createHash('sha256').update('admin123').digest('hex');
+  db.prepare('INSERT INTO admin_users (username, password) VALUES (?, ?)').run('admin', hash);
+  console.log('[DB] Seeded default admin: admin / admin123');
 }
 
 module.exports = db;
