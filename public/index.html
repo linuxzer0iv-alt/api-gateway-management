@@ -5,15 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Gateway - Admin Panel</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
   <style>
     .modal-backdrop { background: rgba(0,0,0,0.5); }
     .fade-in { animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     .tab-active { border-bottom: 2px solid #06b6d4; color: #06b6d4; }
-    .copy-btn:active { transform: scale(0.95); }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #1f2937; }
     ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+    /* Quill dark theme */
+    .ql-toolbar { background: #374151; border-color: #4b5563 !important; border-radius: 8px 8px 0 0; }
+    .ql-container { background: #1f2937; border-color: #4b5563 !important; border-radius: 0 0 8px 8px; min-height: 120px; }
+    .ql-editor { color: #e5e7eb; min-height: 120px; }
+    .ql-editor.ql-blank::before { color: #6b7280; font-style: normal; }
+    .ql-stroke { stroke: #9ca3af !important; }
+    .ql-fill { fill: #9ca3af !important; }
+    .ql-picker-label { color: #9ca3af !important; }
+    .ql-picker-options { background: #374151 !important; border-color: #4b5563 !important; }
+    .ql-active .ql-stroke { stroke: #06b6d4 !important; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen font-sans antialiased">
@@ -33,7 +44,7 @@
         </div>
         <div class="mb-6">
           <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
-          <input type="password" id="login-password" value="admin123" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+          <input type="password" id="login-password" placeholder="******" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
         </div>
         <p id="login-error" class="text-red-400 text-sm mb-3 hidden"></p>
         <button type="submit" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg transition">🔐 Login</button>
@@ -56,8 +67,7 @@
 
     <!-- Tabs -->
     <div class="bg-gray-800 border-b border-gray-700 flex overflow-x-auto">
-      <button class="tab-btn px-6 py-3 text-gray-400 hover:text-white font-medium text-sm transition whitespace-nowrap" data-tab="create" onclick="switchTab('create')">➕ Create User</button>
-      <button class="tab-btn px-6 py-3 text-gray-400 hover:text-white font-medium text-sm transition whitespace-nowrap" data-tab="users" onclick="switchTab('users')">👥 Manage Users</button>
+      <button class="tab-btn px-6 py-3 text-gray-400 hover:text-white font-medium text-sm transition whitespace-nowrap" data-tab="users" onclick="switchTab('users')">👥 Users</button>
       <button class="tab-btn px-6 py-3 text-gray-400 hover:text-white font-medium text-sm transition whitespace-nowrap" data-tab="endpoints" onclick="switchTab('endpoints')">🔧 Endpoints</button>
       <button class="tab-btn px-6 py-3 text-gray-400 hover:text-white font-medium text-sm transition whitespace-nowrap" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
     </div>
@@ -65,69 +75,17 @@
     <!-- Tab Content -->
     <div class="max-w-7xl mx-auto px-4 py-6">
 
-      <!-- ═══ TAB: CREATE USER ═══ -->
-      <div id="tab-create" class="tab-content hidden">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
-          <h2 class="text-xl font-bold text-white mb-2">Buat User Baru</h2>
-          <p class="text-gray-400 text-sm mb-6">Generate API key dan atur akses endpoint sekaligus.</p>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
-              <input type="text" id="c-username" placeholder="cth: mitra-a" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Expiration Date</label>
-              <input type="date" id="c-expired" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 [color-scheme:dark]">
-            </div>
-          </div>
-
-          <h3 class="text-lg font-semibold text-white mb-3">Endpoint Permissions</h3>
-          <div class="overflow-x-auto rounded-lg border border-gray-700 mb-6">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-700 text-gray-300 uppercase text-xs tracking-wider">
-                <tr>
-                  <th class="px-4 py-3 text-left w-10"><input type="checkbox" id="c-select-all" class="rounded bg-gray-600 border-gray-500 text-cyan-500 focus:ring-cyan-500"></th>
-                  <th class="px-4 py-3 text-left">Endpoint</th>
-                  <th class="px-4 py-3 text-left hidden md:table-cell">Path</th>
-                  <th class="px-4 py-3 text-center w-28">Quota</th>
-                  <th class="px-4 py-3 text-center w-28">Reset</th>
-                </tr>
-              </thead>
-              <tbody id="c-endpoint-body" class="divide-y divide-gray-700"></tbody>
-            </table>
-          </div>
-
-          <button id="c-btn-submit" class="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition">🚀 Create User</button>
-          <p id="c-error" class="text-red-400 text-sm mt-2 hidden"></p>
-        </div>
-
-        <!-- API Key Modal -->
-        <div id="c-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-          <div class="modal-backdrop absolute inset-0" onclick="closeCModal()"></div>
-          <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-600 p-6 relative z-10 max-w-lg w-full mx-4 fade-in">
-            <div class="text-center">
-              <div class="text-4xl mb-3">✅</div>
-              <h3 class="text-xl font-bold text-white mb-2">User Created!</h3>
-              <p class="text-gray-400 text-sm mb-4">Copy API Key ini. <strong>Tidak bisa dilihat lagi.</strong></p>
-              <div class="bg-gray-900 rounded-lg p-3 mb-4 border border-gray-600">
-                <code id="c-modal-key" class="text-cyan-300 text-sm break-all select-all"></code>
-              </div>
-              <button onclick="copyCKey()" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition mr-2">📋 Copy</button>
-              <button onclick="closeCModal()" class="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-medium transition">Close</button>
-              <p id="c-copy-fb" class="text-green-400 text-xs mt-2 hidden">✓ Copied!</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ TAB: MANAGE USERS ═══ -->
+      <!-- ═══ TAB: USERS (with inline Create) ═══ -->
       <div id="tab-users" class="tab-content hidden">
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 class="text-xl font-bold text-white">👥 API Users</h2>
-            <button onclick="loadUsers()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition">🔄 Refresh</button>
+            <div class="flex gap-2">
+              <button onclick="showCreateUserModal()" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm transition">➕ Create User</button>
+              <button onclick="loadUsers()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition">🔄</button>
+            </div>
           </div>
+
           <div class="overflow-x-auto rounded-lg border border-gray-700">
             <table class="w-full text-sm">
               <thead class="bg-gray-700 text-gray-300 uppercase text-xs tracking-wider">
@@ -146,7 +104,63 @@
           <p id="u-empty" class="text-gray-500 text-center py-6 hidden">Belum ada user.</p>
         </div>
 
-        <!-- User Detail Modal -->
+        <!-- Create User Modal -->
+        <div id="cu-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+          <div class="modal-backdrop absolute inset-0" onclick="closeCuModal()"></div>
+          <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-600 p-6 relative z-10 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto fade-in">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-xl font-bold text-white">➕ Create User</h3>
+              <button onclick="closeCuModal()" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                <input type="text" id="cu-username" placeholder="cth: mitra-a" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Expiration Date</label>
+                <input type="date" id="cu-expired" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 [color-scheme:dark]">
+              </div>
+            </div>
+            <h4 class="text-base font-semibold text-white mb-3">Endpoint Permissions</h4>
+            <div class="overflow-x-auto rounded-lg border border-gray-700 mb-4">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-700 text-gray-300 uppercase text-xs tracking-wider">
+                  <tr>
+                    <th class="px-4 py-3 text-left w-10"><input type="checkbox" id="cu-select-all" class="rounded bg-gray-600 border-gray-500 text-cyan-500 focus:ring-cyan-500"></th>
+                    <th class="px-4 py-3 text-left">Endpoint</th>
+                    <th class="px-4 py-3 text-left hidden md:table-cell">Path</th>
+                    <th class="px-4 py-3 text-center w-28">Quota</th>
+                    <th class="px-4 py-3 text-center w-28">Reset</th>
+                  </tr>
+                </thead>
+                <tbody id="cu-endpoint-body" class="divide-y divide-gray-700"></tbody>
+              </table>
+            </div>
+            <button id="cu-btn-submit" class="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition">🚀 Create User</button>
+            <p id="cu-error" class="text-red-400 text-sm mt-2 hidden"></p>
+          </div>
+        </div>
+
+        <!-- API Key Modal (after create) -->
+        <div id="cu-apikey-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+          <div class="modal-backdrop absolute inset-0" onclick="closeCuApiKeyModal()"></div>
+          <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-600 p-6 relative z-10 max-w-lg w-full mx-4 fade-in">
+            <div class="text-center">
+              <div class="text-4xl mb-3">✅</div>
+              <h3 class="text-xl font-bold text-white mb-2">User Created!</h3>
+              <p class="text-gray-400 text-sm mb-4">Copy API Key ini. <strong>Tidak bisa dilihat lagi.</strong></p>
+              <div class="bg-gray-900 rounded-lg p-3 mb-4 border border-gray-600">
+                <code id="cu-apikey-display" class="text-cyan-300 text-sm break-all select-all"></code>
+              </div>
+              <button onclick="copyCuApiKey()" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition mr-2">📋 Copy</button>
+              <button onclick="closeCuApiKeyModal()" class="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-medium transition">Close</button>
+              <p id="cu-copy-fb" class="text-green-400 text-xs mt-2 hidden">✓ Copied!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit User Modal -->
         <div id="u-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
           <div class="modal-backdrop absolute inset-0" onclick="closeUModal()"></div>
           <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-600 p-6 relative z-10 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto fade-in">
@@ -168,27 +182,29 @@
                 <code id="u-edit-apikey" class="block w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2.5 text-cyan-300 text-xs break-all select-all cursor-text"></code>
               </div>
             </div>
-            <div class="mb-3 flex gap-2">
+            <div class="mb-3 flex gap-2 flex-wrap">
               <button onclick="saveUEdit()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm transition">💾 Save</button>
               <button onclick="regenerateKey()" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-sm transition">🔑 Regenerate Key</button>
               <button onclick="deleteU()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm transition">🗑️ Delete</button>
             </div>
             <p id="u-edit-fb" class="text-sm mb-3 hidden"></p>
-
             <hr class="border-gray-700 my-4">
             <h4 class="text-lg font-semibold text-white mb-3">Endpoint Configs</h4>
             <div id="u-config-list" class="space-y-2"></div>
-            <button onclick="showAddConfig()" class="mt-3 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition">+ Add Config</button>
-
+            <div class="flex gap-2 mt-3">
+              <button onclick="showAddConfigForm()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition">+ Add Config</button>
+            </div>
             <!-- Add Config Form -->
             <div id="u-add-config-form" class="hidden mt-3 p-3 bg-gray-900 rounded-lg border border-gray-700">
-              <select id="u-ac-endpoint" class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-white text-sm mr-2"></select>
-              <input type="number" id="u-ac-quota" placeholder="Quota" value="100" min="1" class="w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm mr-2">
-              <select id="u-ac-reset" class="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm mr-2">
-                <option value="daily">Daily</option>
-                <option value="fixed">Fixed</option>
-              </select>
-              <button onclick="addConfig()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-sm transition">Add</button>
+              <div class="flex flex-wrap gap-2 items-end">
+                <select id="u-ac-endpoint" class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-white text-sm"></select>
+                <input type="number" id="u-ac-quota" placeholder="Quota" value="100" min="1" class="w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm">
+                <select id="u-ac-reset" class="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm">
+                  <option value="daily">Daily</option>
+                  <option value="fixed">Fixed</option>
+                </select>
+                <button onclick="addConfig()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-sm transition">Add</button>
+              </div>
             </div>
           </div>
         </div>
@@ -219,20 +235,33 @@
           <p id="e-empty" class="text-gray-500 text-center py-6 hidden">Belum ada endpoint.</p>
         </div>
 
-        <!-- Endpoint Edit Modal -->
+        <!-- Endpoint Edit/Create Modal -->
         <div id="e-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
           <div class="modal-backdrop absolute inset-0" onclick="closeEModal()"></div>
-          <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-600 p-6 relative z-10 max-w-lg w-full mx-4 fade-in">
-            <h3 id="e-modal-title" class="text-xl font-bold text-white mb-4">Edit Endpoint</h3>
+          <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-600 p-6 relative z-10 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto fade-in">
+            <h3 id="e-modal-title" class="text-xl font-bold text-white mb-4">✏️ Edit Endpoint</h3>
             <div class="space-y-3">
-              <div><label class="block text-sm text-gray-300 mb-1">Nama Endpoint</label><input type="text" id="e-edit-name" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
-              <div><label class="block text-sm text-gray-300 mb-1">Target URL</label><input type="text" id="e-edit-base" placeholder="https://..." class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
-              <div><label class="block text-sm text-gray-300 mb-1">Endpoint Path</label><input type="text" id="e-edit-path" placeholder="/api/something" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
-              <div><label class="block text-sm text-gray-300 mb-1">Deskripsi</label><input type="text" id="e-edit-desc" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
+              <div>
+                <label class="block text-sm text-gray-300 mb-1">Nama Endpoint</label>
+                <input type="text" id="e-edit-name" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+              </div>
+              <div>
+                <label class="block text-sm text-gray-300 mb-1">Target URL</label>
+                <input type="text" id="e-edit-base" placeholder="https://..." class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+              </div>
+              <div>
+                <label class="block text-sm text-gray-300 mb-1">Endpoint Path</label>
+                <input type="text" id="e-edit-path" placeholder="/api/something" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+              </div>
+              <div>
+                <label class="block text-sm text-gray-300 mb-1">Deskripsi</label>
+                <input type="hidden" id="e-edit-desc">
+                <div id="e-desc-editor"></div>
+              </div>
             </div>
             <div class="flex gap-2 mt-5">
               <button onclick="saveEEdit()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition">💾 Save</button>
-              <button id="e-delete-btn" onclick="deleteEEdit()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition">🗑️ Delete</button>
+              <button id="e-delete-btn" onclick="deleteEEdit()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition hidden">🗑️ Delete</button>
               <button onclick="closeEModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition">Cancel</button>
             </div>
             <p id="e-edit-fb" class="text-sm mt-2 hidden"></p>
@@ -265,7 +294,7 @@
     let endpoints = [];
     let editingUserId = null;
     let editingEndpointId = null;
-    let allEndpoints = [];
+    let quillEditor = null;
 
     // ── HTTP helpers ─────────────────────────────────────────────────────────
     async function api(method, url, body) {
@@ -329,7 +358,7 @@
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('app-screen').classList.remove('hidden');
       document.getElementById('nav-username').textContent = username;
-      switchTab('create');
+      switchTab('users');
       loadEndpoints();
     }
 
@@ -340,23 +369,23 @@
       document.getElementById('tab-' + tab).classList.remove('hidden');
       document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('tab-active', 'text-cyan-400');
 
-      if (tab === 'users') loadUsers();
+      if (tab === 'users') { loadEndpoints(); loadUsers(); }
       if (tab === 'endpoints') loadEndpointsList();
     }
 
-    // ── Load Endpoints (for checkboxes) ──────────────────────────────────────
+    // ── Load endpoints (for checkboxes) ──────────────────────────────────────
     async function loadEndpoints() {
       try {
         endpoints = await api('GET', '/admin/endpoints');
-        const tbody = document.getElementById('c-endpoint-body');
+        const tbody = document.getElementById('cu-endpoint-body');
         tbody.innerHTML = endpoints.map(ep => `
           <tr data-id="${ep.id}">
-            <td class="px-4 py-3"><input type="checkbox" class="c-checkbox rounded bg-gray-600 border-gray-500 text-cyan-500"></td>
+            <td class="px-4 py-3"><input type="checkbox" class="cu-checkbox rounded bg-gray-600 border-gray-500 text-cyan-500"></td>
             <td class="px-4 py-3 font-medium text-white">${esc(ep.nama_endpoint)}</td>
             <td class="px-4 py-3 text-gray-400 hidden md:table-cell font-mono text-xs">${esc(ep.endpoint_path)}</td>
-            <td class="px-4 py-3 text-center"><input type="number" min="1" value="100" class="c-quota w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-center text-sm" disabled></td>
+            <td class="px-4 py-3 text-center"><input type="number" min="1" value="100" class="cu-quota w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-center text-sm" disabled></td>
             <td class="px-4 py-3 text-center">
-              <select class="c-reset bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm" disabled>
+              <select class="cu-reset bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm" disabled>
                 <option value="daily">Daily</option>
                 <option value="fixed">Fixed</option>
               </select>
@@ -364,15 +393,15 @@
           </tr>
         `).join('');
 
-        document.querySelectorAll('.c-checkbox').forEach(cb => {
+        document.querySelectorAll('.cu-checkbox').forEach(cb => {
           cb.addEventListener('change', function() {
             const row = this.closest('tr');
-            row.querySelectorAll('.c-quota, .c-reset').forEach(inp => inp.disabled = !this.checked);
+            row.querySelectorAll('.cu-quota, .cu-reset').forEach(inp => inp.disabled = !this.checked);
           });
         });
 
-        document.getElementById('c-select-all').addEventListener('change', function() {
-          document.querySelectorAll('.c-checkbox').forEach(cb => {
+        document.getElementById('cu-select-all').addEventListener('change', function() {
+          document.querySelectorAll('.cu-checkbox').forEach(cb => {
             cb.checked = this.checked;
             cb.dispatchEvent(new Event('change'));
           });
@@ -380,20 +409,31 @@
       } catch(e) { toast('Gagal load endpoints', false); }
     }
 
-    // ── Tab: Create User ────────────────────────────────────────────────────
-    document.getElementById('c-btn-submit').addEventListener('click', async function() {
-      const username = document.getElementById('c-username').value.trim();
-      const expired_at = document.getElementById('c-expired').value;
+    // ── Create User Modal ──────────────────────────────────────────────────
+    function showCreateUserModal() {
+      document.getElementById('cu-username').value = '';
+      document.getElementById('cu-expired').value = '';
+      document.getElementById('cu-error').classList.add('hidden');
+      document.querySelectorAll('.cu-checkbox').forEach(cb => { cb.checked = false; cb.dispatchEvent(new Event('change')); });
+      document.getElementById('cu-select-all').checked = false;
+      document.getElementById('cu-modal').classList.remove('hidden');
+    }
+
+    function closeCuModal() { document.getElementById('cu-modal').classList.add('hidden'); }
+
+    document.getElementById('cu-btn-submit').addEventListener('click', async function() {
+      const username = document.getElementById('cu-username').value.trim();
+      const expired_at = document.getElementById('cu-expired').value;
       if (!username) { toast('Username wajib diisi', false); return; }
       if (!expired_at) { toast('Expiration Date wajib diisi', false); return; }
 
       const configs = [];
-      document.querySelectorAll('.c-checkbox:checked').forEach(cb => {
+      document.querySelectorAll('.cu-checkbox:checked').forEach(cb => {
         const row = cb.closest('tr');
         configs.push({
           endpoint_id: parseInt(row.dataset.id),
-          quota_limit: parseInt(row.querySelector('.c-quota').value) || 1,
-          reset_type: row.querySelector('.c-reset').value
+          quota_limit: parseInt(row.querySelector('.cu-quota').value) || 1,
+          reset_type: row.querySelector('.cu-reset').value
         });
       });
       if (!configs.length) { toast('Pilih minimal satu endpoint', false); return; }
@@ -401,24 +441,25 @@
       this.disabled = true; this.textContent = '⏳ Processing...';
       try {
         const data = await api('POST', '/admin/manage/users', { username, expired_at, configs });
-        document.getElementById('c-modal-key').textContent = data.api_key;
-        document.getElementById('c-modal').classList.remove('hidden');
-        document.getElementById('c-copy-fb').classList.add('hidden');
+        closeCuModal();
+        document.getElementById('cu-apikey-display').textContent = data.api_key;
+        document.getElementById('cu-apikey-modal').classList.remove('hidden');
+        document.getElementById('cu-copy-fb').classList.add('hidden');
         toast('User ' + username + ' created!');
-        document.getElementById('c-username').value = '';
-        document.getElementById('c-expired').value = '';
-        document.querySelectorAll('.c-checkbox').forEach(cb => { cb.checked = false; cb.dispatchEvent(new Event('change')); });
-        document.getElementById('c-select-all').checked = false;
+        loadUsers();
       } catch(e) { toast(e.message, false); }
       finally { this.disabled = false; this.textContent = '🚀 Create User'; }
     });
 
-    function closeCModal() { document.getElementById('c-modal').classList.add('hidden'); }
-    async function copyCKey() {
-      const key = document.getElementById('c-modal-key').textContent;
+    function closeCuApiKeyModal() {
+      document.getElementById('cu-apikey-modal').classList.add('hidden');
+    }
+
+    async function copyCuApiKey() {
+      const key = document.getElementById('cu-apikey-display').textContent;
       try { await navigator.clipboard.writeText(key); } catch { document.execCommand('copy'); }
-      document.getElementById('c-copy-fb').classList.remove('hidden');
-      setTimeout(() => document.getElementById('c-copy-fb').classList.add('hidden'), 2500);
+      document.getElementById('cu-copy-fb').classList.remove('hidden');
+      setTimeout(() => document.getElementById('cu-copy-fb').classList.add('hidden'), 2500);
     }
 
     // ── Tab: Manage Users ────────────────────────────────────────────────────
@@ -459,7 +500,6 @@
         document.getElementById('u-edit-apikey').textContent = user.api_key;
         document.getElementById('u-edit-fb').classList.add('hidden');
 
-        // configs
         const list = document.getElementById('u-config-list');
         if (!user.configs || !user.configs.length) {
           list.innerHTML = '<p class="text-gray-500 text-sm">No endpoint configs.</p>';
@@ -485,10 +525,8 @@
           `).join('');
         }
 
-        // Populate add config dropdown
         const sel = document.getElementById('u-ac-endpoint');
         const eps = await api('GET', '/admin/endpoints');
-        allEndpoints = eps;
         sel.innerHTML = eps.map(ep => `<option value="${ep.id}">${esc(ep.nama_endpoint)} — ${esc(ep.endpoint_path)}</option>`).join('');
 
         document.getElementById('u-modal').classList.remove('hidden');
@@ -562,7 +600,7 @@
       } catch(e) { toast(e.message, false); }
     }
 
-    function showAddConfig() {
+    function showAddConfigForm() {
       document.getElementById('u-add-config-form').classList.toggle('hidden');
     }
 
@@ -593,7 +631,7 @@
             <td class="px-4 py-3 font-medium text-white">${esc(ep.nama_endpoint)}</td>
             <td class="px-4 py-3 text-gray-400 text-xs">${esc(ep.target_url)}</td>
             <td class="px-4 py-3 font-mono text-xs text-cyan-300">${esc(ep.endpoint_path)}</td>
-            <td class="px-4 py-3 text-gray-400 text-xs">${esc(ep.deskripsi || '')}</td>
+            <td class="px-4 py-3 text-gray-400 text-xs max-w-xs truncate">${esc(stripHtml(ep.deskripsi || ''))}</td>
             <td class="px-4 py-3 text-center">
               <button onclick="openEEdit(${ep.id})" class="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-xs transition">✏️</button>
             </td>
@@ -602,32 +640,38 @@
       } catch(e) { toast('Gagal load endpoints', false); }
     }
 
+    function stripHtml(html) {
+      const d = document.createElement('div');
+      d.innerHTML = html;
+      return d.textContent || d.innerText || '';
+    }
+
+    // ── Endpoint Edit/Create Modal ──────────────────────────────────────────
     function showAddEndpoint() {
       editingEndpointId = null;
       document.getElementById('e-modal-title').textContent = '➕ New Endpoint';
       document.getElementById('e-edit-name').value = '';
       document.getElementById('e-edit-base').value = '';
       document.getElementById('e-edit-path').value = '';
-      document.getElementById('e-edit-desc').value = '';
-      document.getElementById('e-edit-fb').classList.add('hidden');
       document.getElementById('e-delete-btn').classList.add('hidden');
+      document.getElementById('e-edit-fb').classList.add('hidden');
+      quillEditor.setText('');
       document.getElementById('e-modal').classList.remove('hidden');
+      setTimeout(() => quillEditor.focus(), 100);
     }
 
     function openEEdit(id) {
       editingEndpointId = id;
-      const row = document.querySelector(`#e-table-body tr:nth-child(${id})`);
       document.getElementById('e-modal-title').textContent = '✏️ Edit Endpoint';
       document.getElementById('e-delete-btn').classList.remove('hidden');
-      // Fetch single endpoint data
+      document.getElementById('e-edit-fb').classList.add('hidden');
       api('GET', '/admin/manage/endpoints').then(eps => {
         const ep = eps.find(e => e.id === id);
         if (!ep) return;
         document.getElementById('e-edit-name').value = ep.nama_endpoint;
         document.getElementById('e-edit-base').value = ep.target_url;
         document.getElementById('e-edit-path').value = ep.endpoint_path;
-        document.getElementById('e-edit-desc').value = ep.deskripsi || '';
-        document.getElementById('e-edit-fb').classList.add('hidden');
+        quillEditor.root.innerHTML = ep.deskripsi || '';
         document.getElementById('e-modal').classList.remove('hidden');
       });
     }
@@ -639,7 +683,7 @@
         nama_endpoint: document.getElementById('e-edit-name').value.trim(),
         target_url: document.getElementById('e-edit-base').value.trim(),
         endpoint_path: document.getElementById('e-edit-path').value.trim(),
-        deskripsi: document.getElementById('e-edit-desc').value.trim()
+        deskripsi: quillEditor.root.innerHTML
       };
       if (!data.nama_endpoint || !data.target_url || !data.endpoint_path) {
         toast('Fill required fields', false); return;
@@ -682,6 +726,31 @@
       } catch(e) { toast(e.message, false); }
     }
 
+    // ── Init Quill ───────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      quillEditor = new Quill('#e-desc-editor', {
+        theme: 'snow',
+        placeholder: 'Tulis deskripsi endpoint...',
+        modules: {
+          toolbar: [
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link', 'clean']
+          ]
+        }
+      });
+    });
+
+    // ── Esc key ──────────────────────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeCuModal();
+        closeCuApiKeyModal();
+        closeUModal();
+        closeEModal();
+      }
+    });
+
     // ── Helpers ──────────────────────────────────────────────────────────────
     function esc(str) {
       const d = document.createElement('div');
@@ -693,10 +762,6 @@
       if (!key || key.length < 16) return key || '';
       return key.slice(0, 8) + '...' + key.slice(-4);
     }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { closeCModal(); closeUModal(); closeEModal(); }
-    });
   </script>
 </body>
 </html>
