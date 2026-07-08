@@ -232,7 +232,7 @@
             </div>
             <div class="flex gap-2 mt-5">
               <button onclick="saveEEdit()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition">💾 Save</button>
-              <button onclick="deleteEEdit()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition">🗑️ Delete</button>
+              <button id="e-delete-btn" onclick="deleteEEdit()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition">🗑️ Delete</button>
               <button onclick="closeEModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition">Cancel</button>
             </div>
             <p id="e-edit-fb" class="text-sm mt-2 hidden"></p>
@@ -610,6 +610,7 @@
       document.getElementById('e-edit-path').value = '';
       document.getElementById('e-edit-desc').value = '';
       document.getElementById('e-edit-fb').classList.add('hidden');
+      document.getElementById('e-delete-btn').classList.add('hidden');
       document.getElementById('e-modal').classList.remove('hidden');
     }
 
@@ -617,6 +618,7 @@
       editingEndpointId = id;
       const row = document.querySelector(`#e-table-body tr:nth-child(${id})`);
       document.getElementById('e-modal-title').textContent = '✏️ Edit Endpoint';
+      document.getElementById('e-delete-btn').classList.remove('hidden');
       // Fetch single endpoint data
       api('GET', '/admin/manage/endpoints').then(eps => {
         const ep = eps.find(e => e.id === id);
