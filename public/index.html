@@ -154,7 +154,7 @@
               <h3 class="text-xl font-bold text-white">Edit User</h3>
               <button onclick="closeUModal()" class="text-gray-400 hover:text-white text-xl">&times;</button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
                 <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
                 <input type="text" id="u-edit-username" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
@@ -162,6 +162,10 @@
               <div>
                 <label class="block text-sm font-medium text-gray-300 mb-1">Expired At</label>
                 <input type="date" id="u-edit-expired" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 [color-scheme:dark]">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">API Key <span class="text-gray-500">(read-only)</span></label>
+                <code id="u-edit-apikey" class="block w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2.5 text-cyan-300 text-xs break-all select-all cursor-text"></code>
               </div>
             </div>
             <div class="mb-3 flex gap-2">
@@ -452,6 +456,7 @@
         const user = await api('GET', '/admin/manage/users/' + id);
         document.getElementById('u-edit-username').value = user.username;
         document.getElementById('u-edit-expired').value = user.expired_at;
+        document.getElementById('u-edit-apikey').textContent = user.api_key;
         document.getElementById('u-edit-fb').classList.add('hidden');
 
         // configs
