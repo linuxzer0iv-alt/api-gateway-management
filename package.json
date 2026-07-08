@@ -1,0 +1,17 @@
+{
+  "name": "api-gateway-management",
+  "version": "1.0.0",
+  "description": "API Gateway & Management System with Express.js and SQLite",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "axios": "^1.18.1",
+    "better-sqlite3": "^12.11.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "express-http-proxy": "^2.1.1"
+  }
+}

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Gateway - Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .modal-backdrop { background: rgba(0,0,0,0.5); }
+    .copy-btn:active { transform: scale(0.95); }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans antialiased">
+
+  <div class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+        <span class="text-cyan-400">&#x1f6e1;&#xfe0f;</span> API Gateway — Admin Panel
+      </h1>
+      <p class="text-gray-400 mt-1">Buat user baru dan atur akses endpoint beserta kuotanya.</p>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-gray-800 rounded-xl shadow-xl border border-gray-700 p-6 mb-8">
+
+      <!-- Basic Info Row -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+          <input type="text" id="username" placeholder="cth: mitra-a"
+                 class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+        </div>
+        <div>
+          <label for="expired_at" class="block text-sm font-medium text-gray-300 mb-1">Expiration Date</label>
+          <input type="date" id="expired_at"
+                 class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent [color-scheme:dark]">
+        </div>
+      </div>
+
+      <!-- Endpoint Permissions -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-semibold text-white">Endpoint Permissions</h2>
+          <span id="loading-endpoints" class="text-sm text-gray-400">Loading...</span>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-gray-700">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-700 text-gray-300 uppercase text-xs tracking-wider">
+              <tr>
+                <th class="px-4 py-3 text-left w-10">
+                  <input type="checkbox" id="select-all" class="rounded bg-gray-600 border-gray-500 text-cyan-500 focus:ring-cyan-500">
+                </th>
+                <th class="px-4 py-3 text-left">Endpoint</th>
+                <th class="px-4 py-3 text-left hidden md:table-cell">Base URL</th>
+                <th class="px-4 py-3 text-left hidden sm:table-cell">Path</th>
+                <th class="px-4 py-3 text-center w-28">Quota Limit</th>
+                <th class="px-4 py-3 text-center w-28">Reset Type</th>
+              </tr>
+            </thead>
+            <tbody id="endpoint-table-body" class="divide-y divide-gray-700">
+              <!-- Rows injected via JS -->
+            </tbody>
+          </table>
+        </div>
+        <p id="no-endpoints" class="text-gray-500 text-center py-6 hidden">Belum ada endpoint tersedia.</p>
+      </div>
+
+      <!-- Submit Button -->
+      <button id="btn-create-user"
+              class="mt-6 w-full md:w-auto px-8 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition duration-200 shadow-lg shadow-cyan-900/40">
+        &#x2795; Create User
+      </button>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="bg-gray-800 rounded-xl shadow-xl border border-gray-700 p-6">
+      <h2 class="text-lg font-semibold text-white mb-3">Activity Log</h2>
+      <div id="log-container" class="max-h-48 overflow-y-auto space-y-1 text-sm text-gray-400">
+        <p class="text-gray-600 italic">Belum ada aktivitas.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for API Key Result -->
+  <div id="result-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
+    <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-600 p-6 relative z-10 max-w-lg w-full mx-4 fade-in">
+      <div class="text-center">
+        <div class="text-4xl mb-3">&#x2705;</div>
+        <h3 class="text-xl font-bold text-white mb-2">User Created!</h3>
+        <p class="text-gray-400 text-sm mb-4">Copy API Key ini dan simpan. <strong>Tidak bisa dilihat lagi.</strong></p>
+
+        <div class="bg-gray-900 rounded-lg p-3 mb-4 border border-gray-600">
+          <code id="modal-api-key" class="text-cyan-300 text-sm break-all select-all"></code>
+        </div>
+
+        <button onclick="copyApiKey()"
+                class="copy-btn px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition mr-2">
+          &#x1f4cb; Copy
+        </button>
+        <button onclick="closeModal()"
+                class="copy-btn px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-medium transition">
+          Close
+        </button>
+        <p id="copy-feedback" class="text-green-400 text-xs mt-2 hidden">&#x2713; Copied to clipboard!</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Load Endpoints ──────────────────────────────────────────────────────
+    let endpoints = [];
+
+    async function loadEndpoints() {
+      const tbody = document.getElementById('endpoint-table-body');
+      const loading = document.getElementById('loading-endpoints');
+      const noEp = document.getElementById('no-endpoints');
+
+      try {
+        const res = await fetch('/admin/endpoints');
+        endpoints = await res.json();
+
+        loading.classList.add('hidden');
+        if (!endpoints.length) {
+          noEp.classList.remove('hidden');
+          return;
+        }
+        noEp.classList.add('hidden');
+
+        tbody.innerHTML = endpoints.map(ep => `
+          <tr class="hover:bg-gray-750 transition" data-endpoint-id="${ep.id}">
+            <td class="px-4 py-3">
+              <input type="checkbox" class="endpoint-checkbox rounded bg-gray-600 border-gray-500 text-cyan-500 focus:ring-cyan-500">
+            </td>
+            <td class="px-4 py-3 font-medium text-white">${escapeHtml(ep.nama_endpoint)}</td>
+            <td class="px-4 py-3 text-gray-400 hidden md:table-cell text-xs">${escapeHtml(ep.base_url)}</td>
+            <td class="px-4 py-3 text-gray-400 hidden sm:table-cell font-mono text-xs">${escapeHtml(ep.endpoint_path)}</td>
+            <td class="px-4 py-3 text-center">
+              <input type="number" min="1" value="100"
+                     class="quota-input w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-center text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500" disabled>
+            </td>
+            <td class="px-4 py-3 text-center">
+              <select class="reset-select bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500" disabled>
+                <option value="daily" selected>Daily</option>
+                <option value="fixed">Fixed</option>
+              </select>
+            </td>
+          </tr>
+        `).join('');
+
+        // Enable/disable inputs based on checkbox
+        document.querySelectorAll('.endpoint-checkbox').forEach(cb => {
+          cb.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const inputs = row.querySelectorAll('.quota-input, .reset-select');
+            inputs.forEach(inp => inp.disabled = !this.checked);
+          });
+        });
+
+        // Select All
+        document.getElementById('select-all').addEventListener('change', function() {
+          const checked = this.checked;
+          document.querySelectorAll('.endpoint-checkbox').forEach(cb => {
+            cb.checked = checked;
+            cb.dispatchEvent(new Event('change'));
+          });
+        });
+
+        addLog('Endpoints loaded: ' + endpoints.length + ' tersedia');
+
+      } catch (err) {
+        loading.textContent = 'Failed to load endpoints';
+        loading.classList.remove('hidden');
+        loading.classList.add('text-red-400');
+        addLog('Error loading endpoints: ' + err.message, true);
+      }
+    }
+
+    // ── Create User ─────────────────────────────────────────────────────────
+    document.getElementById('btn-create-user').addEventListener('click', async function() {
+      const username = document.getElementById('username').value.trim();
+      const expired_at = document.getElementById('expired_at').value;
+      const btn = this;
+
+      if (!username) { alert('Username wajib diisi.'); return; }
+      if (!expired_at) { alert('Expiration Date wajib diisi.'); return; }
+
+      // Gather checked endpoints
+      const configs = [];
+      document.querySelectorAll('.endpoint-checkbox:checked').forEach(cb => {
+        const row = cb.closest('tr');
+        const endpointId = parseInt(row.dataset.endpointId);
+        const quotaLimit = parseInt(row.querySelector('.quota-input').value) || 1;
+        const resetType = row.querySelector('.reset-select').value;
+        configs.push({ endpoint_id: endpointId, quota_limit: quotaLimit, reset_type: resetType });
+      });
+
+      if (configs.length === 0) {
+        alert('Pilih minimal satu endpoint untuk diberikan akses.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+
+      try {
+        const res = await fetch('/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, expired_at, configs })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Unknown error');
+        }
+
+        // Show modal with API key
+        document.getElementById('modal-api-key').textContent = data.api_key;
+        document.getElementById('result-modal').classList.remove('hidden');
+        document.getElementById('copy-feedback').classList.add('hidden');
+
+        addLog('User "' + username + '" created — API Key: ' + data.api_key.slice(0, 12) + '...');
+
+        // Reset form
+        document.getElementById('username').value = '';
+        document.getElementById('expired_at').value = '';
+        document.querySelectorAll('.endpoint-checkbox').forEach(cb => {
+          cb.checked = false;
+          cb.dispatchEvent(new Event('change'));
+        });
+        document.getElementById('select-all').checked = false;
+
+      } catch (err) {
+        alert('Error: ' + err.message);
+        addLog('Error creating user: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '➕ Create User';
+      }
+    });
+
+    // ── Modal helpers ───────────────────────────────────────────────────────
+    function closeModal() {
+      document.getElementById('result-modal').classList.add('hidden');
+    }
+
+    function copyApiKey() {
+      const key = document.getElementById('modal-api-key').textContent;
+      navigator.clipboard.writeText(key).then(() => {
+        const fb = document.getElementById('copy-feedback');
+        fb.classList.remove('hidden');
+        setTimeout(() => fb.classList.add('hidden'), 2500);
+      }).catch(() => {
+        // Fallback: select and copy manually
+        const el = document.getElementById('modal-api-key');
+        const range = document.createRange();
+        range.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        document.getElementById('copy-feedback').classList.remove('hidden');
+      });
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function addLog(msg, isError) {
+      const container = document.getElementById('log-container');
+      const empty = container.querySelector('.text-gray-600');
+      if (empty) empty.remove();
+
+      const p = document.createElement('p');
+      p.className = isError ? 'text-red-400' : 'text-gray-300';
+      const time = new Date().toLocaleTimeString();
+      p.textContent = '[' + time + '] ' + msg;
+      container.prepend(p);
+
+      // Keep max ~20 items
+      while (container.children.length > 20) {
+        container.lastChild.remove();
+      }
+    }
+
+    // Close modal on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    loadEndpoints();
+  </script>
+</body>
+</html>
