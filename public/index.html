@@ -203,7 +203,7 @@
                 <tr>
                   <th class="px-4 py-3 text-left">ID</th>
                   <th class="px-4 py-3 text-left">Name</th>
-                  <th class="px-4 py-3 text-left">Base URL</th>
+                  <th class="px-4 py-3 text-left">Target URL</th>
                   <th class="px-4 py-3 text-left">Path</th>
                   <th class="px-4 py-3 text-left">Description</th>
                   <th class="px-4 py-3 text-center">Actions</th>
@@ -222,7 +222,7 @@
             <h3 id="e-modal-title" class="text-xl font-bold text-white mb-4">Edit Endpoint</h3>
             <div class="space-y-3">
               <div><label class="block text-sm text-gray-300 mb-1">Nama Endpoint</label><input type="text" id="e-edit-name" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
-              <div><label class="block text-sm text-gray-300 mb-1">Base URL</label><input type="text" id="e-edit-base" placeholder="https://..." class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
+              <div><label class="block text-sm text-gray-300 mb-1">Target URL</label><input type="text" id="e-edit-base" placeholder="https://..." class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
               <div><label class="block text-sm text-gray-300 mb-1">Endpoint Path</label><input type="text" id="e-edit-path" placeholder="/api/something" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
               <div><label class="block text-sm text-gray-300 mb-1">Deskripsi</label><input type="text" id="e-edit-desc" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></div>
             </div>
@@ -586,7 +586,7 @@
           <tr class="hover:bg-gray-750">
             <td class="px-4 py-3 text-gray-400">${ep.id}</td>
             <td class="px-4 py-3 font-medium text-white">${esc(ep.nama_endpoint)}</td>
-            <td class="px-4 py-3 text-gray-400 text-xs">${esc(ep.base_url)}</td>
+            <td class="px-4 py-3 text-gray-400 text-xs">${esc(ep.target_url)}</td>
             <td class="px-4 py-3 font-mono text-xs text-cyan-300">${esc(ep.endpoint_path)}</td>
             <td class="px-4 py-3 text-gray-400 text-xs">${esc(ep.deskripsi || '')}</td>
             <td class="px-4 py-3 text-center">
@@ -617,7 +617,7 @@
         const ep = eps.find(e => e.id === id);
         if (!ep) return;
         document.getElementById('e-edit-name').value = ep.nama_endpoint;
-        document.getElementById('e-edit-base').value = ep.base_url;
+        document.getElementById('e-edit-base').value = ep.target_url;
         document.getElementById('e-edit-path').value = ep.endpoint_path;
         document.getElementById('e-edit-desc').value = ep.deskripsi || '';
         document.getElementById('e-edit-fb').classList.add('hidden');
@@ -630,11 +630,11 @@
     async function saveEEdit() {
       const data = {
         nama_endpoint: document.getElementById('e-edit-name').value.trim(),
-        base_url: document.getElementById('e-edit-base').value.trim(),
+        target_url: document.getElementById('e-edit-base').value.trim(),
         endpoint_path: document.getElementById('e-edit-path').value.trim(),
         deskripsi: document.getElementById('e-edit-desc').value.trim()
       };
-      if (!data.nama_endpoint || !data.base_url || !data.endpoint_path) {
+      if (!data.nama_endpoint || !data.target_url || !data.endpoint_path) {
         toast('Fill required fields', false); return;
       }
       try {

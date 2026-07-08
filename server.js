@@ -86,7 +86,7 @@ app.post('/admin/logout', requireAdmin, (req, res) => {
 
 app.get('/admin/endpoints', (req, res) => {
   try {
-    const rows = db.prepare('SELECT id, nama_endpoint, base_url, endpoint_path, deskripsi FROM endpoints ORDER BY id').all();
+    const rows = db.prepare('SELECT id, nama_endpoint, target_url, endpoint_path, deskripsi FROM endpoints ORDER BY id').all();
     res.json(rows);
   } catch (err) {
     console.error('[Admin] Error fetching endpoints:', err);
@@ -98,7 +98,7 @@ app.get('/admin/endpoints', (req, res) => {
 
 app.get('/admin/manage/endpoints', requireAdmin, (req, res) => {
   try {
-    const rows = db.prepare('SELECT id, nama_endpoint, base_url, endpoint_path, deskripsi FROM endpoints ORDER BY id').all();
+    const rows = db.prepare('SELECT id, nama_endpoint, target_url, endpoint_path, deskripsi FROM endpoints ORDER BY id').all();
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
@@ -107,11 +107,11 @@ app.get('/admin/manage/endpoints', requireAdmin, (req, res) => {
 
 app.post('/admin/manage/endpoints', requireAdmin, (req, res) => {
   try {
-    const { nama_endpoint, base_url, endpoint_path, deskripsi } = req.body;
-    if (!nama_endpoint || !base_url || !endpoint_path) {
-      return res.status(400).json({ error: 'nama_endpoint, base_url, endpoint_path required' });
+    const { nama_endpoint, target_url, endpoint_path, deskripsi } = req.body;
+    if (!nama_endpoint || !target_url || !endpoint_path) {
+      return res.status(400).json({ error: 'nama_endpoint, target_url, endpoint_path required' });
     }
-    const result = db.prepare('INSERT INTO endpoints (nama_endpoint, base_url, endpoint_path, deskripsi) VALUES (?, ?, ?, ?)').run(nama_endpoint, base_url, endpoint_path, deskripsi || '');
+    const result = db.prepare('INSERT INTO endpoints (nama_endpoint, target_url, endpoint_path, deskripsi) VALUES (?, ?, ?, ?)').run(nama_endpoint, target_url, endpoint_path, deskripsi || '');
     res.status(201).json({ success: true, id: result.lastInsertRowid });
   } catch (err) {
     if (err.message?.includes('UNIQUE constraint')) {
@@ -123,8 +123,8 @@ app.post('/admin/manage/endpoints', requireAdmin, (req, res) => {
 
 app.put('/admin/manage/endpoints/:id', requireAdmin, (req, res) => {
   try {
-    const { nama_endpoint, base_url, endpoint_path, deskripsi } = req.body;
-    db.prepare('UPDATE endpoints SET nama_endpoint=?, base_url=?, endpoint_path=?, deskripsi=? WHERE id=?').run(nama_endpoint, base_url, endpoint_path, deskripsi || '', req.params.id);
+    const { nama_endpoint, target_url, endpoint_path, deskripsi } = req.body;
+    db.prepare('UPDATE endpoints SET nama_endpoint=?, target_url=?, endpoint_path=?, deskripsi=? WHERE id=?').run(nama_endpoint, target_url, endpoint_path, deskripsi || '', req.params.id);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
@@ -152,7 +152,7 @@ app.get('/admin/manage/users', requireAdmin, (req, res) => {
     // Attach configs per user
     const getConfigs = db.prepare(`
       SELECT uec.id AS config_id, uec.endpoint_id, uec.quota_limit, uec.quota_used, uec.reset_type, uec.last_reset_date,
-             e.nama_endpoint, e.endpoint_path, e.base_url
+             e.nama_endpoint, e.endpoint_path, e.target_url
       FROM user_endpoint_config uec
       JOIN endpoints e ON e.id = uec.endpoint_id
       WHERE uec.user_id = ?
@@ -177,7 +177,7 @@ app.get('/admin/manage/users/:id', requireAdmin, (req, res) => {
 
     user.configs = db.prepare(`
       SELECT uec.id AS config_id, uec.endpoint_id, uec.quota_limit, uec.quota_used, uec.reset_type, uec.last_reset_date,
-             e.nama_endpoint, e.endpoint_path, e.base_url
+             e.nama_endpoint, e.endpoint_path, e.target_url
       FROM user_endpoint_config uec
       JOIN endpoints e ON e.id = uec.endpoint_id
       WHERE uec.user_id = ?

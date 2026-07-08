@@ -11,7 +11,6 @@ if (!fs.existsSync(DATA_DIR)) {
 const DB_PATH = path.join(DATA_DIR, 'gateway.db');
 const db = new Database(DB_PATH);
 
-// Enable foreign keys
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -22,13 +21,13 @@ db.exec(`
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     username    TEXT    UNIQUE NOT NULL,
     api_key     TEXT    UNIQUE NOT NULL,
-    expired_at  TEXT    NOT NULL  -- format: YYYY-MM-DD
+    expired_at  TEXT    NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS endpoints (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     nama_endpoint   TEXT    NOT NULL,
-    base_url        TEXT    NOT NULL,
+    target_url      TEXT    NOT NULL,
     endpoint_path   TEXT    UNIQUE NOT NULL,
     deskripsi       TEXT
   );
@@ -40,13 +39,13 @@ db.exec(`
     quota_limit       INTEGER NOT NULL,
     quota_used        INTEGER DEFAULT 0,
     reset_type        TEXT    NOT NULL CHECK(reset_type IN ('daily','fixed')),
-    last_reset_date   TEXT    NOT NULL  -- format: YYYY-MM-DD
+    last_reset_date   TEXT    NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS admin_users (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     username    TEXT    UNIQUE NOT NULL,
-    password    TEXT    NOT NULL  -- SHA256 hash
+    password    TEXT    NOT NULL
   );
 `);
 
@@ -56,28 +55,28 @@ const endpointCount = db.prepare('SELECT COUNT(*) AS cnt FROM endpoints').get().
 
 if (endpointCount === 0) {
   const insertEndpoint = db.prepare(`
-    INSERT INTO endpoints (nama_endpoint, base_url, endpoint_path, deskripsi)
-    VALUES (@nama_endpoint, @base_url, @endpoint_path, @deskripsi)
+    INSERT INTO endpoints (nama_endpoint, target_url, endpoint_path, deskripsi)
+    VALUES (@nama_endpoint, @target_url, @endpoint_path, @deskripsi)
   `);
 
   const dummyEndpoints = [
     {
-      nama_endpoint: 'Create User Service',
-      base_url:      'https://httpbin.org/anything',
-      endpoint_path: '/api/create',
-      deskripsi:     'Endpoint untuk membuat user baru di sistem internal'
+      nama_endpoint: 'Todos API',
+      target_url:    'https://jsonplaceholder.typicode.com/todos',
+      endpoint_path: '/api/todos',
+      deskripsi:     'Data todos dari JSONPlaceholder'
     },
     {
-      nama_endpoint: 'View Data Service',
-      base_url:      'https://httpbin.org/anything',
-      endpoint_path: '/api/view',
-      deskripsi:     'Endpoint untuk melihat data dari database internal'
+      nama_endpoint: 'Posts API',
+      target_url:    'https://jsonplaceholder.typicode.com/posts',
+      endpoint_path: '/api/posts',
+      deskripsi:     'Data posts dari JSONPlaceholder'
     },
     {
-      nama_endpoint: 'Health Check Service',
-      base_url:      'https://httpbin.org/anything',
-      endpoint_path: '/api/health',
-      deskripsi:     'Endpoint pengecekan status server tujuan'
+      nama_endpoint: 'HTTPBin Anything',
+      target_url:    'https://httpbin.org/anything',
+      endpoint_path: '/api/anything',
+      deskripsi:     'Echo test dari HTTPBin'
     }
   ];
 
